@@ -1,0 +1,35 @@
+{
+  "name": "babydoge",
+  "version": "1.0.0",
+  "description": "",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.2.0",
+    "convert-html-to-pdf": "^1.0.1",
+    "ethereumjs-tx": "^2.1.2",
+    "hardhat-spdx-license-identifier": "^2.0.3",
+    "html-to-pdf": "^0.1.11",
+    "truffle-hdwallet-provider": "^1.0.17",
+    "twilio": "^3.72.0",
+    "web3-providers-ws": "^1.5.2"
+  },
+  "devDependencies": {
+    "truffle-plugin-verify": "^0.5.11"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shubh151994/EthereumContracts.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/shubh151994/EthereumContracts/issues"
+  },
+  "homepage": "https://github.com/shubh151994/EthereumContracts#readme"
+}
