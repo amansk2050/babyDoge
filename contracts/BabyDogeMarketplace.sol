@@ -3,10 +3,11 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 interface BabyDogeNFT {
-
+    function mint(address, uint256) external;
 }
 contract BabyDogeMarketplace is Ownable{
     BabyDogeNFT public babyDogeNFT;
+    uint256 public constant TOTAL_CATEGORIES = 3;
     struct CategoryDetail {
         uint256 price;
         uint256 total;
@@ -23,25 +24,39 @@ contract BabyDogeMarketplace is Ownable{
     mapping(address => bool) public whitelistedAddress;
 
     //events
+    event buy(address buyer, uint256 tokenCategory, uint256 tokenId, uint256 price, uint256 boughtAt, uint256 stage);
+    event buyForOwner(address buyer, uint256 tokenCategory, uint256 tokenId, uint256 boughtAt);
    
     //modifer
-
-    modifier isWhitelisted(address _userAddress){
-        require(whitelistedAddress[_userAddress], 'You are not whitelisted');
+    modifier isValidCategory(uint256 _tokenCategory){
+        require(_tokenCategory < TOTAL_CATEGORIES, 'Invalid token categories');
         _;
     }
-    constructor(address _babyDogeNFT, uint256[3] memory _prices, uint256[3] memory _total, uint256[3] memory _totalForPresale, uint256[3] memory _totalForOwner) {
+    constructor(address _babyDogeNFT, uint256[TOTAL_CATEGORIES] memory _prices, uint256[TOTAL_CATEGORIES] memory _total, uint256[TOTAL_CATEGORIES] memory _totalForPresale, uint256[TOTAL_CATEGORIES] memory _totalForOwner) {
         babyDogeNFT = BabyDogeNFT(_babyDogeNFT);
         uint256 nextTokenId = 1;
-        for(uint8 index = 0; index < 3; index++){
+        for(uint8 index = 0; index < TOTAL_CATEGORIES; index++){
             require(_total[index] >= _totalForPresale[index] + _totalForOwner[index], 'Invalid token counts');
             tokenCategories[index] = CategoryDetail(_prices[index], _total[index], _totalForPresale[index], _totalForOwner[index], 0,0, nextTokenId);
             nextTokenId = nextTokenId + _total[index];
         }
     }
     //USER FUNCTIONS
-    function buy(uint256 tokenType) external onlyOwner(){
-
+    function buyToken(uint256 _tokenCategory) external isValidCategory(_tokenCategory) payable{
+        CategoryDetail storage categoryDetail = tokenCategories[_tokenCategory];
+        if(stage == 0){
+            require(whitelistedAddress[msg.sender], 'Not eligible to buy in presale');
+            require(categoryDetail.totalMinted < categoryDetail.totalForPresale, 'All Tokens of this cateogry are sold for presale');
+        } else {
+            require(categoryDetail.totalMinted - categoryDetail.totalMintedForOwner < categoryDetail.total - categoryDetail.totalForOwner, 'All Tokens of this cateogry are sold');
+        }
+        uint256 price = currentPrice(_tokenCategory);
+        require(msg.value >= price, 'Price of token is more than the given');
+        categoryDetail.totalMinted++;
+        uint256 tokenId = categoryDetail.nextTokenId;
+        categoryDetail.nextTokenId++;
+        babyDogeNFT.mint(msg.sender, tokenId);
+        emit buy(msg.sender, _tokenCategory, tokenId, price, block.timestamp, stage);
     }
 
     //ADMIN FUNCTIONS
@@ -49,8 +64,8 @@ contract BabyDogeMarketplace is Ownable{
 
     }
 
-    function updatePrices(uint256[3] memory _prices) external onlyOwner(){
-        for(uint8 index = 0; index < 3; index++){
+    function updatePrices(uint256[TOTAL_CATEGORIES] memory _prices) external onlyOwner(){
+        for(uint8 index = 0; index < TOTAL_CATEGORIES; index++){
             tokenCategories[index].price = _prices[index];
         }
     }
@@ -66,6 +81,18 @@ contract BabyDogeMarketplace is Ownable{
             whitelistedAddress[_userAddress[index]] = false;
         }
     }
+
+    function buyTokenForOwner(uint256 _tokenCategory) external isValidCategory(_tokenCategory) onlyOwner(){
+        CategoryDetail storage categoryDetail = tokenCategories[_tokenCategory];
+        require(categoryDetail.totalMintedForOwner < categoryDetail.totalForOwner, 'All Tokens of this cateogry are sold');
+        categoryDetail.totalMinted++;
+        categoryDetail.totalMintedForOwner++;
+        uint256 tokenId = categoryDetail.nextTokenId;
+        categoryDetail.nextTokenId++;
+        babyDogeNFT.mint(msg.sender, tokenId);
+        emit buyForOwner(msg.sender, _tokenCategory, tokenId, block.timestamp);
+    }
+
 
     //VIEW FUNCTIONS
 
@@ -106,7 +133,6 @@ contract BabyDogeMarketplace is Ownable{
 
  
 	
-	// buy				- Function to buy the NFT
-	// buyForOwner			- Function for owner to buy the NFT
+
 	// changeStage			- Function to change the stage	
 }
