@@ -14,6 +14,13 @@ module.exports = {
       timeoutBlocks: 200,  
       skipDryRun: true  ,  
     },
+    matic: {
+      provider: () => new HDWalletProvider(config.mnemomics,config.nodeURL.matic),
+      network_id: config.networkId.matic,
+      confirmations: 2,
+      timeoutBlocks: 200,
+      skipDryRun: true
+    },
   },
 
   
@@ -27,6 +34,6 @@ module.exports = {
   },
   plugins: ["truffle-plugin-verify"],
   api_keys: {
-    etherscan: "H7MVRK8MPF3K6NR2WJDJIJZRR5RM1VWWDK",
+    polygonscan: "RTHWKFDZQHCWQSCYCPMRQFRZIVRFJ8DI8R",
   },
 };
