@@ -14,6 +14,7 @@ contract BabyDogeNFT is ERC721Enumerable, Ownable {
   address public minterAddress;
   uint256 public totalMinted;
   bool public visibility;
+  bool public mintActivate;
   string private defaultBaseURI;
   constructor(
     string memory _name,
@@ -28,12 +29,17 @@ contract BabyDogeNFT is ERC721Enumerable, Ownable {
         _;
     }
 
+  modifier isMintLive() {
+        require(mintActivate == true,"BabyDoge NFT: Mint is not activated now");
+        _;
+    }
+
   function _baseURI() internal view virtual override returns (string memory) {
     return baseURI;
   }
 
 
-  function mint(address _to, uint _id, uint _amount) external onlyMinter(){
+  function mint(address _to, uint _id, uint _amount) external onlyMinter() isMintLive() {
 
         
         require(_amount <= maxMint, "BabyDoge NFT: Cannot mint this much amount");
@@ -86,6 +92,9 @@ contract BabyDogeNFT is ERC721Enumerable, Ownable {
 
   function setDefaultBaseURI(string memory _newDefaultBaseURI) public onlyOwner {
     defaultBaseURI = _newDefaultBaseURI;
+  }
+  function setMintActivation(bool _isMint) public onlyOwner {
+    mintActivate = _isMint;
   }
 
   function setBaseExtension(string memory _newBaseExtension) public onlyOwner {
