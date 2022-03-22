@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 interface BabyDogeNFT {
-    function mint(address, uint256[] memory) external;
+    function mint(address, uint256, uint256) external;
     function maxMint() external returns(uint256);
     
 }
@@ -25,10 +25,15 @@ contract BabyDogeMarketplace is Ownable{
     mapping(uint256 => CategoryDetail) public tokenCategories;
     mapping(uint256 => uint256[3]) public randomAvailable;
     mapping(address => bool) public whitelistedAddress;
+    mapping(address => uint256) public userCodes;
+    mapping(uint256 => address) public codesOwner;
+
+    uint256 private baseCode = 100000;
+    uint256 private nextCode = 1;
 
     //events
-    event buy(address buyer, uint256 requestedTokenCategory,uint256 givenTokenCategory, uint256[] tokenId, uint256 price, uint256 boughtAt, uint256 stage);
-    event buyForOwner(address buyer, uint256 tokenCategory, uint256[] tokenIds, uint256 boughtAt);
+    event buy(address buyer, uint256 requestedTokenCategory,uint256 givenTokenCategory, uint256 startTokenId, uint256 totalToken, uint256 price, uint256 boughtAt, uint256 stage);
+    event buyForOwner(address buyer, uint256 tokenCategory, uint256 startTokenId, uint256 totalToken, uint256 boughtAt);
    
     //modifer
     modifier isValidCategory(uint256 _tokenCategory){
@@ -60,11 +65,10 @@ contract BabyDogeMarketplace is Ownable{
     }
 
     //USER FUNCTIONS
-    function buyToken(uint256 _tokenCategory, uint256 _totalUnits) external isValidCategory(_tokenCategory) payable{
+    function buyToken(uint256 _tokenCategory, uint256 _totalUnits, uint256 _code) external isValidCategory(_tokenCategory) payable{
         require(_totalUnits <= babyDogeNFT.maxMint() && _totalUnits > 0, 'Invalid number of units');
-        uint256[] memory tokenIds;
-        uint8 index;
         uint256 categoryUnit = _totalUnits;
+        uint256 startRandomId;
         CategoryDetail storage categoryDetail = tokenCategories[_tokenCategory];
         uint256 startTokenId = categoryDetail.nextTokenId;
         if(stage == 0){
@@ -77,7 +81,7 @@ contract BabyDogeMarketplace is Ownable{
         require(msg.value >= price, 'Price of tokens is more than the given');
         uint random = uint(keccak256(abi.encodePacked(block.difficulty, block.timestamp))) % 15;
         bool randomAllowed;
-        if(random > _tokenCategory && random < TOTAL_CATEGORIES && randomAvailable[random][_tokenCategory] > 0){
+        if (random > _tokenCategory && random < TOTAL_CATEGORIES && randomAvailable[random][_tokenCategory] > 0){
             CategoryDetail storage randomCategoryDetail = tokenCategories[random];
             if(stage == 0){
                 if(randomCategoryDetail.totalMinted - randomCategoryDetail.totalMintedForOwner < randomCategoryDetail.totalForPresale){
@@ -90,8 +94,7 @@ contract BabyDogeMarketplace is Ownable{
             }
             if(randomAllowed){
                 randomCategoryDetail.totalMinted++;
-                tokenIds[index] = randomCategoryDetail.nextTokenId;
-                index++;
+                startRandomId = randomCategoryDetail.nextTokenId;
                 randomCategoryDetail.nextTokenId++;
                 randomAvailable[random][_tokenCategory]--;
                 categoryUnit--;
@@ -100,16 +103,29 @@ contract BabyDogeMarketplace is Ownable{
                 random = _tokenCategory;
             }
         } 
-        for(index; index < _totalUnits; index++){
-            tokenIds[index] = startTokenId;
-            startTokenId++;
-        }
         categoryDetail.totalMinted = categoryDetail.totalMinted + categoryUnit;
         categoryDetail.nextTokenId = categoryDetail.nextTokenId + categoryUnit;
-        babyDogeNFT.mint(msg.sender, tokenIds);
-        emit buy(msg.sender, _tokenCategory, random, tokenIds, price, block.timestamp, stage);
+        babyDogeNFT.mint(msg.sender, startTokenId, categoryUnit);
+        if(startRandomId > 0){
+            babyDogeNFT.mint(msg.sender, startRandomId, 1);
+            emit buy(msg.sender, _tokenCategory, random, startRandomId, 1, price, block.timestamp, stage);
+        }
+        if(codesOwner[_code] != address(0)){
+            payable(codesOwner[_code]).transfer(msg.value/2);
+        }
+        emit buy(msg.sender, _tokenCategory, _tokenCategory, startTokenId, categoryUnit, price, block.timestamp, stage);
+     }
+
+    function generateCode() external {
+        if(userCodes[msg.sender] == 0){
+            uint256 code = baseCode + nextCode;
+            nextCode++;
+            userCodes[msg.sender] = code;
+            codesOwner[code] = msg.sender;
+        }
     }
 
+    
     //ADMIN FUNCTIONS
     function updateStage() external onlyOwner(){
         stage = 1;
@@ -138,29 +154,23 @@ contract BabyDogeMarketplace is Ownable{
         payable(msg.sender).transfer(address(this).balance);
     }
 
-
-      function buyTokenForOwner2(uint256 _tokenCategory, uint256 _totalUnits) external isValidCategory(_tokenCategory){
+      function buyTokenForOwner(uint256 _tokenCategory, uint256 _totalUnits) external onlyOwner() isValidCategory(_tokenCategory){
         require(_totalUnits <= babyDogeNFT.maxMint() && _totalUnits > 0, 'Invalid number of units');
-        uint256[] memory tokenIds;
         CategoryDetail storage categoryDetail = tokenCategories[_tokenCategory];
         uint256 startTokenId = categoryDetail.nextTokenId;
         require(categoryDetail.totalMintedForOwner + _totalUnits <= categoryDetail.totalForOwner, 'That much token are not left');
-        for(uint8 index = 0; index < _totalUnits; index++){
-            tokenIds[index] = startTokenId;
-            startTokenId++;
-        }
         categoryDetail.totalMinted = categoryDetail.totalMinted + _totalUnits;
         categoryDetail.totalMintedForOwner = categoryDetail.totalMintedForOwner + _totalUnits;
         categoryDetail.nextTokenId = categoryDetail.nextTokenId + _totalUnits;
-        babyDogeNFT.mint(msg.sender, tokenIds);
-        emit buyForOwner(msg.sender, _tokenCategory, tokenIds, block.timestamp);
+        babyDogeNFT.mint(msg.sender, startTokenId, _totalUnits);
+        emit buyForOwner(msg.sender, _tokenCategory, startTokenId, _totalUnits, block.timestamp);
     }
 
     //VIEW FUNCTIONS
 
-    function currentPrice(uint256 _category) public view returns(uint256) {
+    function currentPrice(uint256 _category) public view isValidCategory(_category) returns(uint256) {
         CategoryDetail memory categoryDetail = tokenCategories[_category];
-        if(categoryDetail.totalMinted >= categoryDetail.total / 2) {
+        if(categoryDetail.totalMinted >= categoryDetail.total / 2 && categoryDetail.totalMinted < 3 * categoryDetail.total / 4) {
             return categoryDetail.price * 2;
         } else if(categoryDetail.totalMinted >= 3 * categoryDetail.total / 4){
             return categoryDetail.price * 4;
