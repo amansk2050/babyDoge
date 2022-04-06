@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 interface BabyDogeNFT {
     function mint(address, uint256, uint256) external;
     function maxMint() external returns(uint256);
-    
 }
 contract BabyDogeMarketplace is Ownable{
     BabyDogeNFT public babyDogeNFT;
@@ -19,17 +18,19 @@ contract BabyDogeMarketplace is Ownable{
         uint256 totalMintedForOwner;
         uint256 nextTokenId;
     }
+
+    struct CodeDetail {
+        uint256 totalCollected;
+        uint256 totalGiven;
+    }
     //0 = presale 1 = postSale
     uint256 public stage;
+    address public superOwner;
     //0 gold 1 platinum 2 black
     mapping(uint256 => CategoryDetail) public tokenCategories;
     mapping(uint256 => uint256[3]) public randomAvailable;
     mapping(address => bool) public whitelistedAddress;
-    mapping(address => uint256) public userCodes;
-    mapping(uint256 => address) public codesOwner;
-
-    uint256 private baseCode = 100000;
-    uint256 private nextCode = 1;
+    mapping(uint256 => CodeDetail) public codesDetails;
 
     //events
     event buy(address buyer, uint256 requestedTokenCategory,uint256 givenTokenCategory, uint256 startTokenId, uint256 totalToken, uint256 price, uint256 boughtAt, uint256 stage);
@@ -49,6 +50,7 @@ contract BabyDogeMarketplace is Ownable{
         uint256[TOTAL_CATEGORIES][TOTAL_CATEGORIES] memory _random) {
         babyDogeNFT = BabyDogeNFT(_babyDogeNFT);
         uint256 nextTokenId = 1;
+        address _superOwner;
         for(uint8 index = 0; index < TOTAL_CATEGORIES; index++){
             if(index == 0){
                 require(_random[index][0] + _random[index][1] + _random[index][2] == 0, 'Invalid Random');
@@ -61,6 +63,7 @@ contract BabyDogeMarketplace is Ownable{
             require(_total[index] >= _totalForPresale[index] + _totalForOwner[index], 'Invalid token counts');
             tokenCategories[index] = CategoryDetail(_prices[index], _total[index], _totalForPresale[index], _totalForOwner[index], 0,0, nextTokenId);
             nextTokenId = nextTokenId + _total[index];
+            superOwner = _superOwner;
         }
     }
 
@@ -110,22 +113,15 @@ contract BabyDogeMarketplace is Ownable{
             babyDogeNFT.mint(msg.sender, startRandomId, 1);
             emit buy(msg.sender, _tokenCategory, random, startRandomId, 1, price, block.timestamp, stage);
         }
-        if(codesOwner[_code] != address(0)){
-            payable(codesOwner[_code]).transfer(msg.value/2);
+        uint256 ownerAmount = msg.value;
+        if(_code != 0){
+            ownerAmount = msg.value/2;
+            codesDetails[_code].totalCollected = msg.value - ownerAmount;
         }
+        payable(superOwner).transfer(ownerAmount);
         emit buy(msg.sender, _tokenCategory, _tokenCategory, startTokenId, categoryUnit, price, block.timestamp, stage);
      }
 
-    function generateCode() external {
-        if(userCodes[msg.sender] == 0){
-            uint256 code = baseCode + nextCode;
-            nextCode++;
-            userCodes[msg.sender] = code;
-            codesOwner[code] = msg.sender;
-        }
-    }
-
-    
     //ADMIN FUNCTIONS
     function updateStage() external onlyOwner(){
         stage = 1;
@@ -143,18 +139,34 @@ contract BabyDogeMarketplace is Ownable{
         }
     }
 
+    function giveBenefit(uint256 _code, address payable _userAddress) external onlyOwner(){
+        require(_code != 0, 'Invalid Code');
+        require(_userAddress != address(0), 'Invalid address');
+        uint256 amountToGive = codesDetails[_code].totalCollected - codesDetails[_code].totalGiven ;
+        require(amountToGive > 0, 'Nothing to give');
+        codesDetails[_code].totalGiven = codesDetails[_code].totalGiven + amountToGive;
+        _userAddress.transfer(amountToGive);
+    }
+
     function blacklist(address[] memory _userAddress) external onlyOwner(){
         for(uint256 index = 0; index < _userAddress.length; index++){
             whitelistedAddress[_userAddress[index]] = false;
         }
     }
 
-    function withdraw() external onlyOwner(){
+    function withdraw() external {
+        require(msg.sender == superOwner, 'Only Super Owner can call');
         require(address(this).balance > 0, 'Nothing to withdraw');
         payable(msg.sender).transfer(address(this).balance);
     }
+      
+    function changeSuperOwner(address _newSuperOwner) external {
+        require(msg.sender == superOwner, 'Only Super Owner can call');
+        require(_newSuperOwner != address(0), 'Invalid address');
+        superOwner = _newSuperOwner;
+    }
 
-      function buyTokenForOwner(uint256 _tokenCategory, uint256 _totalUnits) external onlyOwner() isValidCategory(_tokenCategory){
+    function buyTokenForOwner(uint256 _tokenCategory, uint256 _totalUnits) external onlyOwner() isValidCategory(_tokenCategory){
         require(_totalUnits <= babyDogeNFT.maxMint() && _totalUnits > 0, 'Invalid number of units');
         CategoryDetail storage categoryDetail = tokenCategories[_tokenCategory];
         uint256 startTokenId = categoryDetail.nextTokenId;
@@ -186,5 +198,9 @@ contract BabyDogeMarketplace is Ownable{
     function availableTokensForOwner(uint256 _category) public view returns(uint256) {
         CategoryDetail memory categoryDetail = tokenCategories[_category];
         return categoryDetail.totalForOwner - categoryDetail.totalMintedForOwner;
+    }
+
+    function beneftiDetails(uint256 _code) public view returns(uint256, uint256) {
+        return (codesDetails[_code].totalCollected, codesDetails[_code].totalGiven);
     }
  }
