@@ -6,7 +6,18 @@ nft polygon test deployed 2nd : 0xe9cb954A89A899aCa54b96f6A89dAf59804280Ad
 market place polygon : 0x74e7217645d6377b145d4f2068ac4178bae92798
 owner  : 0xb1551B2b46df680E8e25E97232888a26ecdc01F5
 
-//- ----
+//- ---- Fresh Deploy rinkeby phase 1---
+
+marketplace : 0x233333E977bC6bA51133De901630aef4a4E25710
+nft : 0x72eC5798AEf58035A200824A70012d0b326c8b66
+
+// -------- Fresh Deploy rinkby phase 2 ----
+
+nft : 0xac8dc9bD2E2C8E758d1354F3f75D4c033736Ade1
+marketplace : 0x1A23a4E94c6b2419907711A24c3953E811c54b6F
+
+
+//---
 
 Admin set function 
 1. setmaxMint (integer input)

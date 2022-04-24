@@ -44,7 +44,7 @@ contract BabyDogeNFT is ERC721Enumerable, Ownable {
         
         require(_amount <= maxMint, "BabyDoge NFT: Cannot mint this much amount");
         require(totalMinted + _amount <= maxSupply, "BabyDoge NFT: No more NFT left");
-        for (uint256 i = 0; i <= _amount; i++) {
+        for (uint256 i = 0; i < _amount; i++) {
           _mint(_to, _id);
           _id ++ ;
           

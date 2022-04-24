@@ -47,10 +47,10 @@ contract BabyDogeMarketplace is Ownable{
         uint256[TOTAL_CATEGORIES] memory _total, 
         uint256[TOTAL_CATEGORIES] memory _totalForPresale, 
         uint256[TOTAL_CATEGORIES] memory _totalForOwner,
-        uint256[TOTAL_CATEGORIES][TOTAL_CATEGORIES] memory _random) {
+        uint256[TOTAL_CATEGORIES][TOTAL_CATEGORIES] memory _random,
+        address _superOwner) {
         babyDogeNFT = BabyDogeNFT(_babyDogeNFT);
         uint256 nextTokenId = 1;
-        address _superOwner;
         for(uint8 index = 0; index < TOTAL_CATEGORIES; index++){
             if(index == 0){
                 require(_random[index][0] + _random[index][1] + _random[index][2] == 0, 'Invalid Random');
@@ -63,8 +63,9 @@ contract BabyDogeMarketplace is Ownable{
             require(_total[index] >= _totalForPresale[index] + _totalForOwner[index], 'Invalid token counts');
             tokenCategories[index] = CategoryDetail(_prices[index], _total[index], _totalForPresale[index], _totalForOwner[index], 0,0, nextTokenId);
             nextTokenId = nextTokenId + _total[index];
-            superOwner = _superOwner;
+            
         }
+        superOwner = _superOwner;
     }
 
     //USER FUNCTIONS

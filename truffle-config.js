@@ -5,7 +5,7 @@ module.exports = {
   networks: {
     rinkeby: {
       networkCheckTimeout: 1000000,
-      provider: () => new HDWalletProvider(config.mnemomics, config.nodeURL.rinkeby, 0,2),
+      provider: () => new HDWalletProvider(config.mnemomics, config.nodeURL.rinkeby),
       from: config.publicKey.rinkeby,
       network_id: config.networkId.rinkeby,
       gasPrice: 22000000000,
@@ -34,6 +34,6 @@ module.exports = {
   },
   plugins: ["truffle-plugin-verify"],
   api_keys: {
-    polygonscan: "RTHWKFDZQHCWQSCYCPMRQFRZIVRFJ8DI8R",
+    etherscan: "CA3RVI9B9CKSKY3ZRIVV3WX2RXC3TMA54V",
   },
 };
