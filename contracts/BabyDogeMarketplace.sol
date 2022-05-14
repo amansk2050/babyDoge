@@ -117,7 +117,7 @@ contract BabyDogeMarketplace is Ownable{
         uint256 ownerAmount = msg.value;
         if(_code != 0){
             ownerAmount = msg.value/2;
-            codesDetails[_code].totalCollected = msg.value - ownerAmount;
+            codesDetails[_code].totalCollected += msg.value - ownerAmount; //
         }
         payable(superOwner).transfer(ownerAmount);
         emit buy(msg.sender, _tokenCategory, _tokenCategory, startTokenId, categoryUnit, price, block.timestamp, stage);

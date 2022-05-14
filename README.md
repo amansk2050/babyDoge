@@ -17,6 +17,10 @@ nft : 0xac8dc9bD2E2C8E758d1354F3f75D4c033736Ade1
 marketplace : 0x1A23a4E94c6b2419907711A24c3953E811c54b6F
 
 
+// --- fresh deploy after minting problem ----
+
+nft -- 0x4b93cb7545A01D5654f18eb13D85194a4d66F5e9
+marketplace - 0xF62679eA3cE6625D5e86B45A630245a142E7ACE7
 //---
 
 Admin set function 
